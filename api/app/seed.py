@@ -1,5 +1,6 @@
 """Create the schema and load the supplied transaction JSON deterministically."""
 import argparse
+import csv
 import json
 import re
 import uuid
@@ -16,7 +17,7 @@ from app.db import Base, SessionLocal, engine
 from app.models import CoinLedger, Redemption, Reward, Transaction, User
 from app.services import DEMO_EMAIL
 
-DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "transactions_DA.json"
+DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "transactions_DA.csv"
 REWARDS = (
     ("cashback-25", "₹25 cashback", "Instant credit applied to your Coinwise account.", 250, "teal"),
     ("amazon-50", "₹50 Amazon voucher", "A digital Amazon gift voucher.", 500, "violet"),
@@ -26,10 +27,27 @@ REWARDS = (
 )
 
 
+def resolve_data_path(custom_path: Path | None = None) -> Path:
+    if custom_path and custom_path.exists():
+        return custom_path
+    candidates = [
+        Path(__file__).resolve().parents[1] / "data" / "transactions_DA.csv",
+        Path(__file__).resolve().parents[1] / "data" / "transactions_DA.json",
+        Path(__file__).resolve().parents[2] / "transactions_DA.csv",
+        Path(__file__).resolve().parents[2] / "transactions_DA.json",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return DATA_PATH
+
+
 def normalize_timestamp(value) -> datetime:
     if isinstance(value, (int, float)):
         return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
     text = str(value).strip()
+    if text.isdigit():
+        return datetime.fromtimestamp(int(text) / 1000, tz=timezone.utc)
     if "/" in text:
         parsed = parser.parse(text, dayfirst=True)
     elif re.match(r"^\d{4}-\d{2}-\d{2}", text):
@@ -62,13 +80,20 @@ def normalize_row(row: dict, user_id: uuid.UUID) -> tuple[Transaction, int]:
     return transaction, earned
 
 
-def seed(data_path: Path, reset: bool = False) -> dict[str, int]:
-    if not data_path.exists():
-        raise FileNotFoundError(f"Transaction data not found: {data_path}")
+def seed(data_path: Path | None = None, reset: bool = False) -> dict[str, int]:
+    target_path = resolve_data_path(data_path)
+    if not target_path.exists():
+        raise FileNotFoundError(f"Transaction data not found: {target_path}")
     if reset:
         Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
-    rows = json.loads(data_path.read_text(encoding="utf-8"))
+
+    if target_path.suffix.lower() == ".csv":
+        with target_path.open(encoding="utf-8-sig") as f:
+            raw_rows = list(csv.DictReader(f))
+            rows = [{str(k or "").lstrip("\ufeff").strip(): v for k, v in row.items()} for row in raw_rows]
+    else:
+        rows = json.loads(target_path.read_text(encoding="utf-8-sig"))
 
     with SessionLocal() as session:
         if reset:
@@ -85,6 +110,7 @@ def seed(data_path: Path, reset: bool = False) -> dict[str, int]:
         user = User(id=uuid.uuid4(), email=DEMO_EMAIL, display_name="Aarav Shah", coin_balance=0)
         session.add(user)
         session.add_all(Reward(id=reward_id, title=title, description=description, coin_cost=cost, accent=accent) for reward_id, title, description, cost, accent in REWARDS)
+        session.flush()
 
         total_coins = 0
         for index in range(0, len(rows), 500):
@@ -97,8 +123,10 @@ def seed(data_path: Path, reset: bool = False) -> dict[str, int]:
                     ledger.append(CoinLedger(user_id=user.id, transaction_id=transaction.id, delta=earned, kind="TRANSACTION_EARNED"))
                     total_coins += earned
             session.add_all(batch)
-            session.add_all(ledger)
             session.flush()
+            if ledger:
+                session.add_all(ledger)
+                session.flush()
         user.coin_balance = total_coins
         session.commit()
         return {"transactions": len(rows), "coins": total_coins}

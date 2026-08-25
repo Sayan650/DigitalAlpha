@@ -54,7 +54,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, tr:focus-visibl
 .button.quiet { color: var(--slate); background: #e7f3e5; }
 .button.quiet:hover:not(:disabled) { background: #d6ebd3; }
 .table-card { overflow: hidden; }
-.table-heading { padding: 24px 24px 17px; display: flex; justify-content: space-between; align-items: end; }
+.table-heading { padding: 24px 24px 17px; display: flex; justify-content: space-between; align-items: flex-end; }
 .table-heading > span { color: var(--muted); font-size: 13px; }
 .table-scroll { overflow-x: auto; }
 table { width: 100%; min-width: 760px; border-collapse: collapse; }
@@ -76,7 +76,7 @@ td small { display: block; margin-top: 3px; color: #7a98a3; font-size: 10px; }
 .pagination > div { display: flex; gap: 8px; }
 .state { padding: 42px; color: var(--muted); text-align: center; }
 .rewards-card { margin-top: 36px; padding: 26px; }
-.section-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: 20px; }
+.section-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
 .coin-inline { font-weight: 800; color: #24BF64; }
 .notice { border-radius: 9px; color: #137637; background: #e3f6ea; padding: 10px 12px; font-size: 13px; }
 .rewards-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }

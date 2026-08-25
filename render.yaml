@@ -3,6 +3,8 @@ services:
     name: coinwise-api
     runtime: docker
     rootDir: api
+    dockerfilePath: api/Dockerfile
+    dockerContext: api
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL

@@ -1,5 +1,7 @@
+from contextlib import asynccontextmanager
 from datetime import date
 from decimal import Decimal
+import logging
 
 from fastapi import Depends, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,13 +13,32 @@ from app.db import get_session
 from app.models import Reward
 from app.repository import TransactionFilters, analytics, list_transactions, split_values
 from app.schemas import AnalyticsOut, BalanceOut, RedeemIn, RedemptionOut, RewardOut, TransactionPage
+from app.seed import DATA_PATH, seed
 from app.services import get_demo_user, redeem_reward
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
-app = FastAPI(title="Coinwise API", version="1.0.0")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        seed(DATA_PATH)
+        logger.info("Database initialized and seeded successfully.")
+    except Exception as exc:
+        logger.warning(f"Database auto-seed check warning: {exc}")
+    yield
+
+
+app = FastAPI(title="Coinwise API", version="1.0.0", lifespan=lifespan)
+
+origins = [o.strip() for o in settings.frontend_origin.split(",") if o.strip()]
+if not origins or "*" in origins:
+    origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

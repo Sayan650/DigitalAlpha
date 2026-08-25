@@ -8,6 +8,12 @@ Coinwise is a responsive credit-card transaction and rewards dashboard. It pairs
 - FastAPI + SQLAlchemy + PostgreSQL 18
 - Docker Compose for local PostgreSQL
 
+## Live Deployments
+
+- **Frontend (Vercel)**: https://digital-alpha-nu.vercel.app
+- **Backend API (Render)**: https://digitalalpha-2j98.onrender.com
+- **GitHub Repository**: https://github.com/Sayan650/DigitalAlpha
+
 ## Run locally
 
 Prerequisites: Node 20+, Python 3.12+, and Docker Desktop. The provided `transactions_DA.json` is tracked under `api/data/`.
